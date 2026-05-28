@@ -190,14 +190,51 @@ nav.scrolled { background: rgba(0,0,0,.92); }
 .safety-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .safety-tag { font-size: 9px; letter-spacing: .25em; text-transform: uppercase; border: 1px solid #222; padding: 8px 16px; color: var(--gray); }
 
-/* TESTIMONIALS */
-.testimonials { background: #000; padding: 120px 8vw; }
-.testimonial-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: #111; margin-top: 80px; }
-.testimonial-item { background: #000; padding: 48px 36px; }
-.testimonial-quote { font-size: 15px; line-height: 1.9; font-weight: 300; margin-bottom: 28px; color: var(--off-white); font-style: italic; }
-.testimonial-meta { font-size: 10px; letter-spacing: .3em; color: var(--gray); text-transform: uppercase; }
-.testimonial-stars { color: var(--accent); letter-spacing: .1em; margin-bottom: 20px; font-size: 12px; }
+.testimonial-meta { 
+  font-size: 10px; 
+  letter-spacing: .3em; 
+  color: var(--gray); 
+  text-transform: uppercase; 
+}
 
+/* ← この下に追加 */
+
+.testimonial-slider {
+  position: relative;
+  max-width: 900px;
+  margin: 80px auto 0;
+  height: 260px;
+  overflow: hidden;
+}
+
+.testimonial-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.testimonial-card {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 1s ease,
+    transform 1s ease;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding: 48px;
+  border: 1px solid #111;
+  background: #050505;
+}
+
+.testimonial-card.active {
+  opacity: 1;
+  transform: translateY(0);
+}
 /* CTA */
 .cta-panel { position: relative; height: 70vh; min-height: 480px; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
 .cta-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(80,80,180,.07) 0%, transparent 70%), linear-gradient(to bottom, #000, #03030a, #000); }
@@ -549,26 +586,177 @@ footer { background: #000; border-top: 1px solid #111; padding: 64px 8vw 40px; }
 </section>
 
 <!-- TESTIMONIALS -->
+<!-- TESTIMONIALS -->
 <section class="testimonials" id="voices">
   <div class="section-header reveal">
     <span class="section-label">Voices</span>
     <h2 class="section-title">体験者の言葉。</h2>
   </div>
-  <div class="testimonial-grid">
-    <div class="testimonial-item reveal">
-      <div class="testimonial-stars">★★★★★</div>
-      <p class="testimonial-quote">「飛んだ瞬間、叫んでいた。あんなに自分の体が軽く感じたことは生まれて一度もなかった。」</p>
-      <div class="testimonial-meta">K.T. — 46歳 / 会社員 / 中級コース</div>
-    </div>
-    <div class="testimonial-item reveal reveal-delay-1">
-      <div class="testimonial-stars">★★★★★</div>
-      <p class="testimonial-quote">「地球が見えたとき、涙が出た。長期間の旅行はもう辛い。そう思っていたのに生まれ変わったかのような体験でした。」</p>
-      <div class="testimonial-meta">M.S. — 45歳 / 経営者 / 絶景スペシャル</div>
-    </div>
-    <div class="testimonial-item reveal reveal-delay-2">
-      <div class="testimonial-stars">★★★★★</div>
-      <p class="testimonial-quote">「毎日の仕事とか全部どうでもよくなった。帰ってきてから、なんか生まれ変わった気分です。」</p>
-      <div class="testimonial-meta">R.H. — 52歳 / デザイナー / 上級コース</div>
+
+  <div class="testimonial-slider reveal">
+
+    <div class="testimonial-track" id="testimonialTrack">
+
+      <div class="testimonial-card active">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「最近は長時間の旅行が疲れてしまっていた。でも月面を飛んだ瞬間、“まだ自分は冒険できる”って思えました。」
+        </p>
+        <div class="testimonial-meta">48歳 / 会社員</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「若い頃みたいに走れなくなった。でもここでは体が軽かった。久しぶりに心から笑いました。」
+        </p>
+        <div class="testimonial-meta">52歳 / 自営業</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「仕事ばかりの人生だったけど、地球を見た瞬間に全部が小さく感じた。」
+        </p>
+        <div class="testimonial-meta">46歳 / 管理職</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「体力に自信がなくなっていた自分でも、本当に飛べた。」
+        </p>
+        <div class="testimonial-meta">55歳 / 元営業職</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「最近、“初めて”が減っていた。でもここには人生で初めての感覚がありました。」
+        </p>
+        <div class="testimonial-meta">49歳 / デザイナー</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「月面で浮かんだ瞬間、20代の頃の自分を思い出した。」
+        </p>
+        <div class="testimonial-meta">51歳 / 建築関係</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「体より先に、心が軽くなった。」
+        </p>
+        <div class="testimonial-meta">47歳 / 会社経営</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「旅行のたびに疲れていたのに、ここでは不思議とずっとワクワクしていた。」
+        </p>
+        <div class="testimonial-meta">50歳 / 医療関係</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「“もう若くない”と思っていた。でも月では違った。」
+        </p>
+        <div class="testimonial-meta">54歳 / エンジニア</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「久しぶりに、自分の人生に興奮した。」
+        </p>
+        <div class="testimonial-meta">45歳 / 会社員</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「階段ですら疲れる日があるのに、月では飛んでいた。」
+        </p>
+        <div class="testimonial-meta">56歳 / 飲食店経営</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「人生後半に、こんな景色が待っているなんて思わなかった。」
+        </p>
+        <div class="testimonial-meta">53歳 / 教員</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「無重力じゃない。“自分を忘れる感覚”でした。」
+        </p>
+        <div class="testimonial-meta">44歳 / フリーランス</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「若い頃より、今のほうが感動できるんだと思った。」
+        </p>
+        <div class="testimonial-meta">57歳 / 元公務員</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「写真を撮るつもりだった。でも途中から全部、目に焼き付けたくなった。」
+        </p>
+        <div class="testimonial-meta">48歳 / 編集者</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「こんなに静かな興奮は初めてだった。」
+        </p>
+        <div class="testimonial-meta">52歳 / コンサルタント</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「体力じゃなく、“感性”で楽しめる冒険だった。」
+        </p>
+        <div class="testimonial-meta">50歳 / ライター</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「月面を歩きながら、人生を見直していた。」
+        </p>
+        <div class="testimonial-meta">55歳 / 会社役員</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「“疲れる旅行”じゃなく、“生き返る旅”だった。」
+        </p>
+        <div class="testimonial-meta">47歳 / 看護師</div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          「帰還後もしばらく、心だけ月に残っていた。」
+        </p>
+        <div class="testimonial-meta">58歳 / 写真家</div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -806,6 +994,29 @@ const sio = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) { animateCount(e.target); sio.unobserve(e.target); } });
 }, { threshold: .5 });
 document.querySelectorAll('.stat-num').forEach(el => sio.observe(el));
+
+  // ─── TESTIMONIAL SLIDER ───
+(function() {
+
+  const cards = document.querySelectorAll('.testimonial-card');
+
+  let current = 0;
+
+  function showNext() {
+
+    cards[current].classList.remove('active');
+
+    current = (current + 1) % cards.length;
+
+    cards[current].classList.add('active');
+
+  }
+
+  cards[0].classList.add('active');
+
+  setInterval(showNext, 4500);
+
+})();
 </script>
 </body>
 </html>
