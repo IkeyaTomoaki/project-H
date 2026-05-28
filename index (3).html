@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUNA WIRE — Moon Wire Action Tour</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --white: #ffffff; --off-white: #e8e8e8;
+  --gray: #8a8a8a; --black: #000000; --accent: #d4af37;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black); color: var(--white);
+  font-family: 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;
+  overflow-x: hidden; cursor: none;
+}
+
+/* CURSOR */
+#cursor {
+  position: fixed; width: 8px; height: 8px; background: var(--white);
+  border-radius: 50%; pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%); transition: width .2s, height .2s, background .2s;
+}
+#cursor.hovered { width: 40px; height: 40px; background: transparent; border: 1px solid #fff; }
+
+/* LOADER */
+#loader {
+  position: fixed; inset: 0; background: #000; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 1s ease .5s;
+}
+#loader.hide { opacity: 0; pointer-events: none; }
+#loader-text { font-size: 12px; letter-spacing: .4em; color: var(--gray); }
+#loader-bar-wrap { width: 200px; height: 1px; background: #222; margin-top: 16px; }
+#loader-bar { height: 1px; background: #fff; width: 0; transition: width 1.2s ease; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px;
+  background: linear-gradient(to bottom, rgba(0,0,0,.7), transparent);
+  transition: background .4s;
+}
+nav.scrolled { background: rgba(0,0,0,.92); }
+.nav-logo { font-size: 22px; font-weight: 700; letter-spacing: .25em; color: #fff; text-decoration: none; }
+.nav-links { display: flex; gap: 36px; list-style: none; }
+.nav-links a { font-size: 11px; letter-spacing: .25em; color: var(--off-white); text-decoration: none; text-transform: uppercase; transition: color .2s; }
+.nav-links a:hover { color: #fff; }
+.nav-cta {
+  font-size: 11px; letter-spacing: .25em; text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,.5); padding: 10px 24px;
+  color: #fff; text-decoration: none; cursor: none; transition: background .2s, border-color .2s;
+}
+.nav-cta:hover { background: #fff; color: #000; }
+
+/* FULLSCREEN PANELS */
+.panel {
+  position: relative; width: 100%; height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: flex-end; overflow: hidden;
+}
+.panel-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.75) 0%, rgba(0,0,0,.1) 60%, transparent 100%);
+}
+.panel-content {
+  position: relative; z-index: 2; padding: 0 8vw 80px; max-width: 900px;
+}
+.panel-eyebrow { font-size: 11px; letter-spacing: .4em; color: var(--gray); text-transform: uppercase; margin-bottom: 20px; display: block; }
+.panel-title {
+  font-size: clamp(48px, 7vw, 96px); font-weight: 700; line-height: .95;
+  letter-spacing: -.01em; text-transform: uppercase; margin-bottom: 24px;
+}
+.panel-sub { font-size: clamp(13px,1.4vw,16px); color: var(--off-white); letter-spacing: .08em; line-height: 1.7; margin-bottom: 36px; max-width: 480px; font-weight: 300; }
+.panel-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* BUTTONS */
+.btn { display: inline-block; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; text-decoration: none; cursor: none; padding: 14px 36px; font-weight: 500; transition: all .25s; }
+.btn-white { background: #fff; color: #000; }
+.btn-white:hover { background: var(--off-white); }
+.btn-outline { border: 1px solid rgba(255,255,255,.55); color: #fff; }
+.btn-outline:hover { background: rgba(255,255,255,.12); border-color: #fff; }
+
+/* SCROLL HINT */
+.scroll-hint { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: .6; }
+.scroll-hint span { font-size: 9px; letter-spacing: .4em; color: var(--gray); }
+.scroll-line { width: 1px; height: 48px; background: linear-gradient(to bottom, var(--gray), transparent); animation: scrollDrop 2s ease-in-out infinite; }
+@keyframes scrollDrop { 0%,100%{opacity:.6;transform:scaleY(1)} 50%{opacity:.2;transform:scaleY(.4)} }
+
+/* STARFIELD CANVAS */
+#starfield { position: absolute; inset: 0; z-index: 1; }
+
+/* MOON SCENE */
+.moon-scene {
+  background: radial-gradient(ellipse 80% 40% at 50% 110%, #1c1c2e 0%, transparent 70%),
+              radial-gradient(ellipse 30% 20% at 20% 85%, #2a2a3e 0%, transparent 50%),
+              linear-gradient(to bottom, #000005 0%, #06060e 40%, #0a0a18 100%);
+}
+
+
+/* CRATERS */
+.craters { position: absolute; bottom: 0; left: 0; right: 0; height: 160px; z-index: 2; pointer-events: none; }
+
+/* ─── 3D EARTH ─── */
+.earth-3d-wrap {
+  position: absolute; left: 52%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px; height: 380px;
+  display: flex; align-items: center; justify-content: center;
+  perspective: 900px; z-index: 2;
+}
+.earth-3d-inner {
+  width: 380px; height: 380px;
+  display: flex; align-items: center; justify-content: center;
+  transform-style: preserve-3d; position: relative;
+}
+.earth-ocean {
+  position: absolute; width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, #1a4e96, #0c2250 55%, #040c1e);
+  box-shadow: 0 0 70px 24px rgba(40,100,220,.28), 0 0 140px 70px rgba(20,60,160,.12);
+}
+.earth-atmosphere {
+  position: absolute; width: 336px; height: 336px; border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 40px 12px rgba(80,160,255,.1);
+  border: 1px solid rgba(100,160,255,.12);
+}
+#earth-pivot {
+  width: 0; height: 0; transform-style: preserve-3d;
+  animation: earthRotate 28s linear infinite;
+}
+.et { /* earth tile */
+  width: 5px; height: 5px; position: absolute; border-radius: 50%;
+}
+@keyframes earthRotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+
+/* WIRE LINE decoration */
+.wire-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+
+/* TICKER */
+.ticker-wrap { overflow: hidden; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; padding: 14px 0; background: #000; }
+.ticker { display: flex; white-space: nowrap; animation: tickerScroll 30s linear infinite; }
+.ticker-item { font-size: 11px; letter-spacing: .3em; color: var(--gray); text-transform: uppercase; padding: 0 40px; }
+.ticker-sep { color: var(--accent); padding: 0 8px; }
+@keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* STATS */
+.stats-bar {
+  background: #000; border-top: 1px solid #111; border-bottom: 1px solid #111;
+  display: grid; grid-template-columns: repeat(4,1fr);
+}
+.stat-item { padding: 56px 8vw; border-right: 1px solid #111; text-align: center; }
+.stat-item:last-child { border-right: none; }
+.stat-num { font-size: clamp(40px,5vw,72px); font-weight: 700; letter-spacing: -.02em; line-height: 1; display: block; margin-bottom: 8px; }
+.stat-label { font-size: 10px; letter-spacing: .35em; color: var(--gray); }
+
+/* COURSES */
+.courses-section { background: #000; padding: 120px 8vw; }
+.section-header { margin-bottom: 80px; }
+.section-label { font-size: 10px; letter-spacing: .5em; color: var(--gray); text-transform: uppercase; margin-bottom: 20px; display: block; }
+.section-title { font-size: clamp(36px,5vw,64px); font-weight: 700; text-transform: uppercase; letter-spacing: -.01em; line-height: 1; }
+.courses-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1px; background: #1a1a1a; }
+.course-item { background: #000; padding: 48px 40px; position: relative; overflow: hidden; transition: background .3s; cursor: none; }
+.course-item::before { content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 0; background: var(--accent); transition: height .4s ease; }
+.course-item:hover { background: #0a0a0a; }
+.course-item:hover::before { height: 100%; }
+.course-num { font-size: 10px; letter-spacing: .4em; color: var(--gray); margin-bottom: 24px; display: block; }
+.course-name { font-size: clamp(24px,3vw,36px); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 12px; }
+.course-meta { font-size: 11px; letter-spacing: .2em; color: var(--accent); margin-bottom: 20px; }
+.course-desc { font-size: 13px; color: var(--gray); line-height: 1.8; font-weight: 300; }
+.course-level { position: absolute; top: 48px; right: 40px; font-size: 9px; letter-spacing: .3em; color: #333; writing-mode: vertical-rl; }
+
+/* FLOW */
+.flow-section { background: #050505; padding: 120px 8vw; }
+.flow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; margin-top: 80px; }
+.flow-steps { display: flex; flex-direction: column; }
+.flow-step { display: flex; gap: 32px; padding: 36px 0; border-bottom: 1px solid #111; cursor: none; transition: padding-left .3s; }
+.flow-step:hover { padding-left: 12px; }
+.flow-step:first-child { border-top: 1px solid #111; }
+.step-num { font-size: 10px; letter-spacing: .3em; color: var(--gray); padding-top: 4px; min-width: 36px; }
+.step-content h4 { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.step-content p { font-size: 13px; color: var(--gray); line-height: 1.8; font-weight: 300; }
+.flow-info { position: sticky; top: 100px; }
+.flow-info-title { font-size: clamp(28px,3.5vw,48px); font-weight: 700; text-transform: uppercase; line-height: 1.1; margin-bottom: 24px; }
+.flow-info p { font-size: 14px; color: var(--gray); line-height: 1.9; font-weight: 300; margin-bottom: 40px; }
+.safety-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.safety-tag { font-size: 9px; letter-spacing: .25em; text-transform: uppercase; border: 1px solid #222; padding: 8px 16px; color: var(--gray); }
+
+/* TESTIMONIALS */
+.testimonials { background: #000; padding: 120px 8vw; }
+.testimonial-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: #111; margin-top: 80px; }
+.testimonial-item { background: #000; padding: 48px 36px; }
+.testimonial-quote { font-size: 15px; line-height: 1.9; font-weight: 300; margin-bottom: 28px; color: var(--off-white); font-style: italic; }
+.testimonial-meta { font-size: 10px; letter-spacing: .3em; color: var(--gray); text-transform: uppercase; }
+.testimonial-stars { color: var(--accent); letter-spacing: .1em; margin-bottom: 20px; font-size: 12px; }
+
+/* CTA */
+.cta-panel { position: relative; height: 70vh; min-height: 480px; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
+.cta-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(80,80,180,.07) 0%, transparent 70%), linear-gradient(to bottom, #000, #03030a, #000); }
+.cta-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,.04); animation: ringPulse 4s ease-in-out infinite; }
+@keyframes ringPulse { 0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)} 50%{opacity:.1;transform:translate(-50%,-50%) scale(1.05)} }
+.cta-content { position: relative; z-index: 2; }
+.cta-title { font-size: clamp(40px,6vw,80px); font-weight: 700; text-transform: uppercase; line-height: .95; margin-bottom: 24px; }
+.cta-sub { font-size: 13px; letter-spacing: .2em; color: var(--gray); margin-bottom: 48px; }
+.cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+/* FOOTER */
+footer { background: #000; border-top: 1px solid #111; padding: 64px 8vw 40px; }
+.footer-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; flex-wrap: wrap; gap: 40px; }
+.footer-logo { font-size: 24px; font-weight: 700; letter-spacing: .25em; }
+.footer-links { display: flex; gap: 32px; flex-wrap: wrap; }
+.footer-links a { font-size: 11px; letter-spacing: .2em; color: var(--gray); text-decoration: none; text-transform: uppercase; transition: color .2s; cursor: none; }
+.footer-links a:hover { color: #fff; }
+.footer-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.footer-copy { font-size: 11px; color: #333; letter-spacing: .1em; }
+.footer-note { font-size: 10px; color: #2a2a2a; max-width: 400px; line-height: 1.6; }
+
+/* REVEAL */
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity .9s ease, transform .9s ease; }
+.reveal.in { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: .15s; }
+.reveal-delay-2 { transition-delay: .3s; }
+.reveal-delay-3 { transition-delay: .45s; }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; }
+  .nav-links { display: none; }
+  .panel-content { padding: 0 24px 60px; }
+  .courses-grid, .testimonial-grid { grid-template-columns: 1fr; }
+  .stats-bar { grid-template-columns: repeat(2,1fr); }
+  .flow-grid { grid-template-columns: 1fr; }
+  .flow-info { position: static; }
+  .astronaut { right: 4vw; width: 90px; }
+  .earth-3d-wrap { width: 260px; height: 260px; left: 50%; }
+  .earth-ocean { width: 220px; height: 220px; }
+  .earth-atmosphere { width: 232px; height: 232px; }
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div style="text-align:center">
+    <div id="loader-text">INITIALIZING LUNA WIRE SYSTEMS</div>
+    <div id="loader-bar-wrap"><div id="loader-bar"></div></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav id="mainNav">
+  <a href="#" class="nav-logo">LUNA WIRE</a>
+  <ul class="nav-links">
+    <li><a href="#courses">コース</a></li>
+    <li><a href="#flow">体験の流れ</a></li>
+    <li><a href="#voices">参加者の声</a></li>
+  </ul>
+  <a href="#reserve" class="nav-cta">予約する</a>
+</nav>
+
+<!-- ═══ HERO — Moon Surface ═══ -->
+<section class="panel moon-scene" id="hero">
+  <canvas id="starfield"></canvas>
+  <div class="earth-glow"></div>
+
+  <!-- Wire geometry -->
+  <svg class="wire-svg" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+    <line x1="200" y1="600" x2="800" y2="320" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="8 12"/>
+    <line x1="800" y1="320" x2="1300" y2="480" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="8 12"/>
+    <circle cx="800" cy="320" r="6" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+    <circle cx="200" cy="600" r="4" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <circle cx="1300" cy="480" r="4" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  </svg>
+
+  
+    <!-- Tether line -->
+    <path d="M165 90 Q190 60 195 10" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" fill="none" stroke-dasharray="5 4"/>
+
+    <!-- LEFT ARM (raised up-left) -->
+    <path d="M66 140 Q42 118 28 96" stroke="url(#bg)" stroke-width="25" stroke-linecap="round" fill="none"/>
+    <!-- left wrist ring -->
+    <ellipse cx="26" cy="93" rx="13" ry="8" fill="#b0b0b0"/>
+    <!-- left glove -->
+    <path d="M14 78 Q10 88 14 100 Q20 108 30 104 Q38 98 36 86 Q32 76 22 76 Z" fill="#c8c8c8"/>
+    <!-- glove finger hints -->
+    <path d="M14 82 Q10 80 11 76" stroke="#b0b0b0" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M30 104 Q32 112 28 114" stroke="#b0b0b0" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+    <!-- RIGHT ARM (extended right-down) -->
+    <path d="M134 140 Q162 152 174 170" stroke="url(#bg)" stroke-width="25" stroke-linecap="round" fill="none"/>
+    <!-- right wrist ring -->
+    <ellipse cx="176" cy="173" rx="13" ry="8" fill="#b0b0b0"/>
+    <!-- right glove -->
+    <path d="M168 180 Q166 192 172 200 Q180 205 188 198 Q194 188 190 178 Q184 170 174 172 Z" fill="#c8c8c8"/>
+    <path d="M190 178 Q196 176 197 172" stroke="#b0b0b0" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+    <!-- BODY (torso) -->
+    <path d="M64 128 Q57 178 60 222 Q70 246 100 248 Q130 246 140 222 Q143 178 136 128 Q118 118 82 118 Z" fill="url(#bg)" stroke="#b8b8b8" stroke-width="1"/>
+
+    <!-- Chest control pack -->
+    <rect x="70" y="140" width="60" height="58" rx="8" fill="#d2d2d2" stroke="#b5b5b5" stroke-width="1"/>
+    <!-- pack top stripe -->
+    <rect x="74" y="144" width="52" height="6" rx="3" fill="#c0c0c0"/>
+    <!-- status lights -->
+    <circle cx="82" cy="162" r="5" fill="#00aaff" filter="url(#softglow)"/>
+    <circle cx="97" cy="162" r="5" fill="#ff3333" filter="url(#softglow)"/>
+    <circle cx="112" cy="162" r="5" fill="#33ee44" filter="url(#softglow)"/>
+    <!-- display screen -->
+    <rect x="74" y="171" width="52" height="18" rx="3" fill="#001814"/>
+    <rect x="77" y="174" width="22" height="12" rx="2" fill="#00cc66" opacity=".75"/>
+    <rect x="102" y="174" width="10" height="5" rx="1" fill="#0066ff" opacity=".7"/>
+    <rect x="102" y="181" width="10" height="5" rx="1" fill="#004488" opacity=".6"/>
+    <!-- lower strap lines -->
+    <line x1="70" y1="205" x2="130" y2="205" stroke="#c0c0c0" stroke-width="1.5"/>
+    <line x1="70" y1="212" x2="130" y2="212" stroke="#c0c0c0" stroke-width="1.5"/>
+
+    <!-- NECK RING -->
+    <rect x="64" y="115" width="72" height="14" rx="7" fill="#b2b2b2" stroke="#989898" stroke-width="1"/>
+    <!-- neck ring highlight -->
+    <rect x="66" y="116" width="68" height="5" rx="3" fill="rgba(255,255,255,0.2)"/>
+
+    <!-- HELMET -->
+    <circle cx="100" cy="68" r="54" fill="url(#hg)" stroke="#a8a8a8" stroke-width="1.5"/>
+    <!-- Helmet inner shadow ring -->
+    <circle cx="100" cy="68" r="54" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="6"/>
+    <!-- horizontal detail lines -->
+    <path d="M52 55 Q100 42 148 55" stroke="rgba(180,180,180,0.6)" stroke-width="1" fill="none"/>
+    <path d="M50 84 Q100 98 150 84" stroke="rgba(180,180,180,0.5)" stroke-width="1" fill="none"/>
+    <!-- VISOR (golden amber) -->
+    <ellipse cx="100" cy="70" rx="36" ry="28" fill="url(#vg)"/>
+    <!-- Visor inner depth -->
+    <ellipse cx="100" cy="70" rx="34" ry="26" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="2"/>
+    <!-- Visor reflections -->
+    <ellipse cx="84" cy="57" rx="12" ry="9" fill="white" opacity=".12"/>
+    <ellipse cx="90" cy="52" rx="5" ry="3.5" fill="white" opacity=".22"/>
+    <!-- Small reflection dot -->
+    <circle cx="78" cy="60" r="2" fill="white" opacity=".15"/>
+    <!-- Visor rim -->
+    <ellipse cx="100" cy="70" rx="36" ry="28" fill="none" stroke="#909090" stroke-width="1.5"/>
+
+    <!-- LEFT LEG -->
+    <path d="M80 234 Q74 272 72 308" stroke="url(#lg)" stroke-width="28" stroke-linecap="round" fill="none"/>
+    <!-- RIGHT LEG -->
+    <path d="M120 234 Q126 272 128 308" stroke="url(#lg)" stroke-width="28" stroke-linecap="round" fill="none"/>
+
+    <!-- Left boot -->
+    <path d="M56 310 Q58 322 68 326 Q82 329 90 322 Q96 316 92 308 Z" fill="#bebebe" stroke="#ababab" stroke-width="1"/>
+    <!-- boot sole -->
+    <path d="M56 322 Q68 330 90 326" stroke="#a0a0a0" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+    <!-- Right boot -->
+    <path d="M144 310 Q142 322 132 326 Q118 329 110 322 Q104 316 108 308 Z" fill="#bebebe" stroke="#ababab" stroke-width="1"/>
+    <path d="M144 322 Q132 330 110 326" stroke="#a0a0a0" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </svg>
+
+  <!-- Moon craters SVG -->
+  <svg class="craters" viewBox="0 0 1440 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,100 Q180,60 360,90 Q540,120 720,80 Q900,40 1080,85 Q1260,125 1440,70 L1440,160 L0,160 Z" fill="#080812"/>
+    <ellipse cx="160" cy="118" rx="45" ry="14" fill="#0d0d1e" stroke="#1a1a30" stroke-width=".5"/>
+    <ellipse cx="450" cy="108" rx="28" ry="8" fill="#0a0a1a" stroke="#1a1a28" stroke-width=".5"/>
+    <ellipse cx="900" cy="100" rx="60" ry="16" fill="#0d0d20" stroke="#1a1a2e" stroke-width=".5"/>
+    <ellipse cx="1200" cy="115" rx="35" ry="10" fill="#0a0a1c" stroke="#18182a" stroke-width=".5"/>
+    <ellipse cx="700" cy="130" rx="22" ry="6" fill="#090916" stroke="#141428" stroke-width=".5"/>
+  </svg>
+
+  <div class="panel-content">
+    <span class="panel-eyebrow">月面ワイヤーアクションツアー — LUNA WIRE EXPERIENCE</span>
+    <h1 class="panel-title">空を飛ぶように<br>月を駆けろ。</h1>
+    <p class="panel-sub">重力は地球の1/6。ワイヤーと低重力が生み出す<br>かつてない浮遊感が、あなたを待っている。</p>
+    <div class="panel-actions">
+      <a href="#reserve" class="btn btn-white">今すぐ予約する</a>
+      <a href="#courses" class="btn btn-outline">コースを見る</a>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <span class="ticker-item">LUNA BASE STATION <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">4 COURSES AVAILABLE <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">GRAVITY 1/6 <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">EARTH VIEW FROM THE RIDGE <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">2026 SEASON NOW OPEN <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">CRATER DIVE EXPERIENCE <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">LUNA BASE STATION <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">4 COURSES AVAILABLE <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">GRAVITY 1/6 <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">EARTH VIEW FROM THE RIDGE <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">2026 SEASON NOW OPEN <span class="ticker-sep">✦</span></span>
+    <span class="ticker-item">CRATER DIVE EXPERIENCE <span class="ticker-sep">✦</span></span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-item reveal">
+    <span class="stat-num" data-target="1.6">0</span>
+    <span class="stat-label">m/s² — 月面重力加速度</span>
+  </div>
+  <div class="stat-item reveal reveal-delay-1">
+    <span class="stat-num" data-target="4" data-int="1">0</span>
+    <span class="stat-label">コース ／ 全レベル対応</span>
+  </div>
+  <div class="stat-item reveal reveal-delay-2">
+    <span class="stat-num" data-target="4.6">0</span>
+    <span class="stat-label">km — 上級コース最長距離</span>
+  </div>
+  <div class="stat-item reveal reveal-delay-3">
+    <span class="stat-num" data-target="384400" data-int="1">0</span>
+    <span class="stat-label">km — 地球からの距離</span>
+  </div>
+</div>
+
+<!-- ═══ HERO PANEL 2 — 3D Earth View ═══ -->
+<section class="panel" style="background:radial-gradient(ellipse at 60% 40%, #060616 0%, #000 60%);" id="earthPanel">
+
+  <!-- 3D CSS Earth Globe -->
+  <div class="earth-3d-wrap">
+    <div class="earth-3d-inner" id="earthContainer">
+      <div class="earth-ocean"></div>
+      <div class="earth-atmosphere"></div>
+      <div id="earth-pivot"></div>
+    </div>
+  </div>
+
+  <!-- Ambient star particles behind earth -->
+  <canvas id="starfield2" style="position:absolute;inset:0;z-index:1;pointer-events:none"></canvas>
+
+  <div class="panel-content">
+    <span class="panel-eyebrow">サンライズ展望台より — EARTH VIEW</span>
+    <h2 class="panel-title">地平線の向こう<br>に、地球。</h2>
+    <p class="panel-sub">絶景スペシャルルートのクライマックス。言葉では伝えきれないパノラマが、あなたの人生観を変える。</p>
+    <div class="panel-actions">
+      <a href="#courses" class="btn btn-outline">ルートを見る</a>
+    </div>
+  </div>
+</section>
+
+<!-- COURSES -->
+<section class="courses-section" id="courses">
+  <div class="section-header reveal">
+    <span class="section-label">Courses</span>
+    <h2 class="section-title">あなたの挑戦を、<br>選べ。</h2>
+  </div>
+  <div class="courses-grid">
+    <div class="course-item reveal">
+      <span class="course-num">01 / BEGINNER</span>
+      <h3 class="course-name">初級コース</h3>
+      <div class="course-meta">1.8 KM　／　60 MIN</div>
+      <p class="course-desc">ゆったりと月面の絶景を堪能するビュールート。ワイヤー初体験でも安心の設計。低重力の浮遊感に身を委ねながら、まず月面に慣れよう。</p>
+      <span class="course-level">EASY</span>
+    </div>
+    <div class="course-item reveal reveal-delay-1">
+      <span class="course-num">02 / INTERMEDIATE</span>
+      <h3 class="course-name">中級コース</h3>
+      <div class="course-meta">3.2 KM　／　90 MIN</div>
+      <p class="course-desc">クレーターをまたぐ爽快なワイヤー横断ルート。リッジゾーンから眼下に広がるダイナミックな月面地形と加速する浮遊感が癖になる。</p>
+      <span class="course-level">MODERATE</span>
+    </div>
+    <div class="course-item reveal">
+      <span class="course-num">03 / ADVANCED</span>
+      <h3 class="course-name">上級コース</h3>
+      <div class="course-meta">4.6 KM　／　120 MIN</div>
+      <p class="course-desc">バレーゾーンからクレーター内ダイブまで、月面の地形すべてを制するロングルート。究極の没入感と征服感を求める挑戦者のために。</p>
+      <span class="course-level">HARD</span>
+    </div>
+    <div class="course-item reveal reveal-delay-1">
+      <span class="course-num">04 / SPECIAL</span>
+      <h3 class="course-name">絶景スペシャルルート</h3>
+      <div class="course-meta">2.4 KM　／　70 MIN</div>
+      <p class="course-desc">サンライズ展望台と全パノラマスポットを巡るフォトルート。地球が見える瞬間は、写真でも言葉でも伝えきれない。一生ものの景色へ。</p>
+      <span class="course-level">SCENIC</span>
+    </div>
+  </div>
+</section>
+
+<!-- HERO PANEL 3 — Wire Action -->
+<section class="panel" style="background:linear-gradient(to bottom,#000,#050510 40%,#000);">
+  <svg class="wire-svg" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+    <line x1="0" y1="200" x2="1440" y2="500" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+    <line x1="0" y1="320" x2="1440" y2="600" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+    <line x1="0" y1="700" x2="1440" y2="280" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+    <circle cx="360" cy="305" r="8" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+    <circle cx="720" cy="405" r="8" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+    <circle cx="1080" cy="455" r="8" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+    <line x1="360" y1="305" x2="360" y2="380" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 6"/>
+    <line x1="720" y1="405" x2="720" y2="500" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 6"/>
+    <line x1="1080" y1="455" x2="1080" y2="550" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 6"/>
+    <circle cx="360" cy="305" r="3" fill="rgba(212,175,55,0.7)"/>
+    <circle cx="720" cy="405" r="3" fill="rgba(212,175,55,0.7)"/>
+    <circle cx="1080" cy="455" r="3" fill="rgba(212,175,55,0.7)"/>
+  </svg>
+  <div class="panel-content">
+    <span class="panel-eyebrow">Wire Action System</span>
+    <h2 class="panel-title">重力が<br>味方になる、<br>瞬間。</h2>
+    <p class="panel-sub">最先端のワイヤーテクノロジーと月面の低重力が融合。あなたの身体は、映画の主人公のように宙を舞う。</p>
+  </div>
+</section>
+
+<!-- FLOW -->
+<section class="flow-section" id="flow">
+  <div class="section-header reveal">
+    <span class="section-label">Experience Flow</span>
+    <h2 class="section-title">ルナ・ベースから<br>はじまる冒険。</h2>
+  </div>
+  <div class="flow-grid">
+    <div class="flow-steps">
+      <div class="flow-step reveal">
+        <span class="step-num">01</span>
+        <div class="step-content"><h4>装備 ＆ 安全講習</h4><p>ルナ・ベースステーションにてスーツ着用。専任ガイドによる安全ブリーフィング。ワイヤーシステムの基本操作を習得する。</p></div>
+      </div>
+      <div class="flow-step reveal reveal-delay-1">
+        <span class="step-num">02</span>
+        <div class="step-content"><h4>低重力トレーニング</h4><p>専用トレーニングエリアにて低重力に身体を慣らす。月面の感覚を体で覚えることで、本コースをより深く楽しめる。</p></div>
+      </div>
+      <div class="flow-step reveal reveal-delay-2">
+        <span class="step-num">03</span>
+        <div class="step-content"><h4>ワイヤーアクション体験</h4><p>スタートポイントへ移動し、選択コースへ。クレーターを飛越え、リッジを駆け、月面を自由に泳ぐように進む。</p></div>
+      </div>
+      <div class="flow-step reveal reveal-delay-3">
+        <span class="step-num">04</span>
+        <div class="step-content"><h4>ゴール ＆ チェックアウト</h4><p>ルナ・ベースへ帰還。記念フォトとチェックアウト。体験の余韻とともに、地球への帰路につく。</p></div>
+      </div>
+    </div>
+    <div class="flow-info reveal">
+      <h3 class="flow-info-title">安全は、<br>すべてに<br>優先する。</h3>
+      <p>NASAと共同開発したワイヤーシステムによる多重ロック構造、訓練を受けた専任ガイドの常時同行、基地内24時間医療体制。あらゆる局面で、参加者の安全が最優先される。</p>
+      <div class="safety-tags">
+        <span class="safety-tag">Multi-Lock Wire System</span>
+        <span class="safety-tag">Certified Guides</span>
+        <span class="safety-tag">24h Medical Support</span>
+        <span class="safety-tag">Real-time Monitoring</span>
+        <span class="safety-tag">Emergency Protocol</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials" id="voices">
+  <div class="section-header reveal">
+    <span class="section-label">Voices</span>
+    <h2 class="section-title">体験者の言葉。</h2>
+  </div>
+  <div class="testimonial-grid">
+    <div class="testimonial-item reveal">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-quote">「飛んだ瞬間、叫んでいた。あんなに自分の体が軽く感じたことは生まれて一度もなかった。」</p>
+      <div class="testimonial-meta">K.T. — 28歳 / 会社員 / 中級コース</div>
+    </div>
+    <div class="testimonial-item reveal reveal-delay-1">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-quote">「地球が見えたとき、涙が出た。何百億円出しても惜しくない。そんな体験でした。」</p>
+      <div class="testimonial-meta">M.S. — 45歳 / 経営者 / 絶景スペシャル</div>
+    </div>
+    <div class="testimonial-item reveal reveal-delay-2">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-quote">「毎日の仕事とか全部どうでもよくなった。帰ってきてから、なんか生まれ変わった気分です。」</p>
+      <div class="testimonial-meta">R.H. — 32歳 / デザイナー / 上級コース</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-panel" id="reserve">
+  <div class="cta-bg"></div>
+  <div class="cta-ring" style="width:300px;height:300px;left:50%;top:50%;"></div>
+  <div class="cta-ring" style="width:550px;height:550px;left:50%;top:50%;animation-delay:.8s"></div>
+  <div class="cta-ring" style="width:800px;height:800px;left:50%;top:50%;animation-delay:1.6s"></div>
+  <div class="cta-content reveal">
+    <p style="font-size:11px;letter-spacing:.5em;color:var(--gray);margin-bottom:24px;text-transform:uppercase">2026 Season — 予約受付中</p>
+    <h2 class="cta-title">あなたの<br>月面デビューを、<br>はじめよう。</h2>
+    <p class="cta-sub">定員に限りがあります — 早期予約特典あり</p>
+    <div class="cta-actions">
+      <a href="#" class="btn btn-white">今すぐ予約する</a>
+      <a href="#" class="btn btn-outline">資料請求（無料）</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-logo">LUNA WIRE</div>
+    <div class="footer-links">
+      <a href="#courses">コース</a>
+      <a href="#flow">体験の流れ</a>
+      <a href="#voices">参加者の声</a>
+      <a href="#">パンフレット</a>
+      <a href="#">プライバシーポリシー</a>
+      <a href="#">お問い合わせ</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© 2026 LUNA WIRE EXPERIENCE</p>
+    <p class="footer-note">※本サービスは架空のコンセプト企画です。実際の月面渡航とは一切関係ありません。</p>
+  </div>
+</footer>
+
+<script>
+// ─── CURSOR ───
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e => { cur.style.left=e.clientX+'px'; cur.style.top=e.clientY+'px'; });
+document.querySelectorAll('a,button').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('hovered'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('hovered'));
+});
+
+// ─── LOADER ───
+window.addEventListener('load', () => {
+  document.getElementById('loader-bar').style.width = '100%';
+  setTimeout(() => document.getElementById('loader').classList.add('hide'), 1600);
+});
+
+// ─── STARFIELD (hero) ───
+(function() {
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    stars = [];
+    for (let i=0; i<280; i++) {
+      stars.push({ x:Math.random()*canvas.width, y:Math.random()*canvas.height,
+        r:Math.random()*1.4+.2, a:Math.random(), da:(Math.random()*.008+.002)*(Math.random()<.5?1:-1) });
+    }
+  }
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s => {
+      s.a = Math.max(.05, Math.min(1, s.a+s.da));
+      if (s.a<=.05||s.a>=1) s.da*=-1;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${s.a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize(); window.addEventListener('resize', resize); draw();
+})();
+
+// ─── STARFIELD 2 (earth panel) ───
+(function() {
+  const canvas = document.getElementById('starfield2');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    stars = [];
+    for (let i=0; i<180; i++) {
+      stars.push({ x:Math.random()*canvas.width, y:Math.random()*canvas.height,
+        r:Math.random()*1.2+.2, a:Math.random()*.6+.1, da:(Math.random()*.005+.001)*(Math.random()<.5?1:-1) });
+    }
+  }
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s => {
+      s.a = Math.max(.05, Math.min(.8, s.a+s.da));
+      if (s.a<=.05||s.a>=.8) s.da*=-1;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${s.a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize(); window.addEventListener('resize', resize); draw();
+})();
+
+// ─── 3D CSS EARTH ───
+(function() {
+  // Earth tile data (31 lat × 64 lon) — land=1, ocean=0
+  const earth = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+  ];
+
+  const pivot = document.getElementById('earth-pivot');
+  const Ny = 64, Nx = 31, dy = 25, R = 155;
+
+  // Color map by latitude: tropical=cyan, mid=blue, polar=icy
+  function tileColor(x) {
+    const lat = (x - (Nx-1)/2) / ((Nx+1)/2); // -1 to 1
+    const abs = Math.abs(lat);
+    if (abs < 0.25) return { c:'#22ddaa', s:'#22ddaa' }; // tropical — green-cyan
+    if (abs < 0.55) return { c:'#44aaee', s:'#44aaee' }; // mid — blue
+    return { c:'#aaddff', s:'#aaddff' };                  // polar — icy
+  }
+
+  for (let y=0; y<Ny; y++) {
+    for (let x=0; x<Nx; x++) {
+      if (!earth[Nx-1-x][(y+dy)%Ny]) continue;
+      const rotX = (x-(Nx-1)/2)/((Nx+1)/2)*90;
+      const rotY = (y+0.1)/Ny*360;
+      const { c, s } = tileColor(x);
+      const t = document.createElement('div');
+      t.className = 'et';
+      t.style.cssText = `transform:rotateY(${rotY}deg) rotateX(${rotX}deg) translateZ(${R}px);background:${c};box-shadow:0 0 4px ${s};`;
+      pivot.appendChild(t);
+    }
+  }
+
+  // Pause on hover, play on leave
+  const container = document.getElementById('earthContainer');
+  container.addEventListener('mouseenter', () => {
+    const anim = pivot.getAnimations()[0];
+    if (anim) anim.pause();
+  });
+  container.addEventListener('mouseleave', () => {
+    const anim = pivot.getAnimations()[0];
+    if (anim) anim.play();
+  });
+
+  // Drag to rotate
+  let dragging = false, startX = 0, baseAngle = 0, currentAngle = 0;
+  container.addEventListener('mousedown', e => {
+    dragging = true; startX = e.clientX;
+    const anim = pivot.getAnimations()[0];
+    if (anim) { anim.pause(); const t = anim.currentTime; baseAngle = (t / 28000 * 360) % 360; }
+    currentAngle = baseAngle;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    currentAngle = baseAngle + dx * 0.3;
+    pivot.style.transform = `rotateY(${currentAngle}deg)`;
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    pivot.style.animation = 'none';
+    pivot.style.transform = `rotateY(${currentAngle}deg)`;
+    // Resume from current position
+    setTimeout(() => {
+      pivot.style.animation = '';
+      pivot.style.transform = '';
+    }, 50);
+  });
+})();
+
+// ─── NAV SCROLL ───
+window.addEventListener('scroll', () => {
+  document.getElementById('mainNav').classList.toggle('scrolled', scrollY > 60);
+});
+
+// ─── SCROLL REVEAL ───
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// ─── STATS COUNTER ───
+function animateCount(el) {
+  const target = parseFloat(el.dataset.target);
+  const isInt = !!el.dataset.int;
+  const dur = 1800, start = performance.now();
+  (function step(now) {
+    const p = Math.min((now-start)/dur, 1), e = 1-Math.pow(1-p,3);
+    el.textContent = isInt ? Math.floor(target*e).toLocaleString() : (target*e).toFixed(1);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = isInt ? target.toLocaleString() : target.toFixed(1);
+  })(performance.now());
+}
+const sio = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { animateCount(e.target); sio.unobserve(e.target); } });
+}, { threshold: .5 });
+document.querySelectorAll('.stat-num').forEach(el => sio.observe(el));
+</script>
+</body>
+</html>
